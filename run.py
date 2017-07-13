@@ -7,10 +7,11 @@ import subprocess
 import uuid
 
 import redis
-from bottle import post, run, template, request
+from bottle import post, run, template, request, delete
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 rs = redis.Redis()
+ids = {}
 
 
 @post('/classify')
@@ -62,6 +63,34 @@ def index():
     return template(json.dumps(outputs))
 
 
+@post('/document/{docId}')
+def index(doc_id):
+    body = request.body.read().decode('utf-8')
+
+    line_number = ids[doc_id]
+    if line_number is None:
+        with open("training.txt", "a") as training_file:
+            training_file.write(body.replace('\n', ' ').replace('\r', ' ') + '\n')
+    else:
+        #sed -i '5d' file.txt
+        print()
+
+
+@delete('/document/{docId}')
+def delete(doc_id):
+    #@TODO: delete line from index file and training file
+    print()
+
+
+def init_index():
+    with open("index.txt", "r") as index_file:
+        content = index_file.readlines()
+    counter = 0
+    for line in content:
+        ids[line] = counter
+        counter += 1
+
+
 def is_redis_available():
     try:
         rs.get(None)  # getting None returns None or throws an exception
@@ -74,5 +103,7 @@ if __name__ == "__main__":
 
     config = configparser.ConfigParser()
     config.read(dir_path + "/config.ini")
+
+    init_index()
 
     run(port=int(config.get('http_service', 'port')))
