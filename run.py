@@ -2,16 +2,18 @@
 import codecs
 import configparser
 import json
-import os
 import subprocess
 import uuid
-
 import redis
-from bottle import post, run, template, request, delete
+from bottle import post, run, template, request, delete, get
+import os
+import glob
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 rs = redis.Redis()
-ids = {}
+#db = shelve.open('db')
+document_dir = dir_path + '/documents'
+training_dir = dir_path + '/training'
 
 
 @post('/classify')
@@ -63,32 +65,52 @@ def index():
     return template(json.dumps(outputs))
 
 
-@post('/document/{docId}')
+@post('/document/<doc_id>')
 def index(doc_id):
     body = request.body.read().decode('utf-8')
 
-    line_number = ids[doc_id]
-    if line_number is None:
-        with open("training.txt", "a") as training_file:
-            training_file.write(body.replace('\n', ' ').replace('\r', ' ') + '\n')
-    else:
-        #sed -i '5d' file.txt
-        print()
+    body = json.loads(body)
+
+    text = ""
+
+    for label in body['labels']:
+        text += "label__" + label.replace(' ', '_') + " "
+
+    text += body['text'].replace('\n', ' ').replace('\r', ' ')
+
+    with open(document_dir + "/" + doc_id, "a") as document_file:
+        document_file.write(text)
+
+    return {"acknowledgment": True}
 
 
-@delete('/document/{docId}')
+@delete('/document/<doc_id>')
 def delete(doc_id):
-    #@TODO: delete line from index file and training file
-    print()
+    file_path = document_dir + '/' + doc_id
+
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+        return {"acknowledgment": True}
+    else:
+        return {'error': 'file not found'}
 
 
-def init_index():
-    with open("index.txt", "r") as index_file:
-        content = index_file.readlines()
-    counter = 0
-    for line in content:
-        ids[line] = counter
-        counter += 1
+@get('/train')
+def create_training_file():
+
+    training_file = training_dir + '/training.txt'
+
+    if os.path.isfile(training_file):
+        os.remove(training_file)
+
+    with open(training_file, 'a') as outfile:
+        for filename in glob.glob(document_dir + '/*'):
+            with open(filename, 'rb') as readfile:
+                outfile.write(readfile.read().decode('utf-8') + '\n')
+
+    os.system(dir_path + '/fastText/fasttext supervised -input ' + training_file + ' -output '+ training_dir + '/model')
+
+    return "ok"
 
 
 def is_redis_available():
@@ -104,6 +126,10 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(dir_path + "/config.ini")
 
-    init_index()
+    if not os.path.isdir(document_dir):
+        os.mkdir(document_dir)
+
+    if not os.path.isdir(training_dir):
+        os.mkdir(training_dir)
 
     run(port=int(config.get('http_service', 'port')))

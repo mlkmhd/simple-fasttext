@@ -103,3 +103,9 @@ ENV/
 .idea/
 
 redis/
+
+db
+
+fastText/
+documents/
+training/
