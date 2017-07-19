@@ -1,5 +1,6 @@
 # simple-fasttext
-simple and ultra fast library on top of facebook fasttext
+simple and ultra fast library on top of facebook fasttext. 
+this library using redis as cache manager to improve frequent classification requests
 
 ## install
 
