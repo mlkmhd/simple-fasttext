@@ -5,13 +5,13 @@ this library using redis as cache manager to improve frequent classification req
 ## install
 
 ```
-$ git clone --recursive https://github.com/mlkmhd/simple-fasttext`
+$ git clone --recursive https://github.com/mlkmhd/simple-fasttext
 $ cd simple-fasttext
 $ install.sh
 $ python run.py
 ```
 
-## Usage:
+## Usage
 
 index all your documents. each document should have a text and array of labels:
 
